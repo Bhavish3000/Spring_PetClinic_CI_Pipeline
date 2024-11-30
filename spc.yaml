@@ -1,0 +1,48 @@
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+schedules:
+  - cron: '* 1 * * *'
+    displayName: DayBuild
+    branches:
+      include:
+        - main
+parameters:
+  - name: Jdkversion
+    type: string
+    default: 1.17
+    values:
+      - '1.17'
+      - '1.11'
+      - '1.10'
+      - '1.9'
+      - '1.8'
+
+stages:
+  - stage: CI
+    displayName: SpringPetclinic
+    jobs:
+      - job: Build
+        displayName: SpringPetclinic-mavenBuild
+        pool:
+          vmImage: ubuntu-24.04
+        steps:
+          - task: Maven@4
+            inputs:
+              mavenPOMFile: pom.xml
+              goals: clean package
+              publishJUnitResults: true
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              testRunTitle: 'spc_test'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: "${{ parameters.Jdkversion }}"
+          - task: CopyFiles@2
+            inputs:
+              Contents: '**/*.jar'
+              TargetFolder: $(Build.ArtifactStagingDirectory)
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'snapshot'
